@@ -156,8 +156,8 @@ label.lgb{display:inline-block;cursor:pointer}
 <button class="tab" data-v="admin" aria-label="Admin" style="display:none"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 4.6-3 8.3-7 10-4-1.7-7-5.4-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg><span>Admin</span></button>
 </nav>
 <main id="main"><noscript><p class="noscript">Pentru a folosi pagina trebuie activat JavaScript.</p></noscript></main>
-<footer>Pagina oficială a clubului de robotică Minitehnicus Baia Sprie. LEGO®, SPIKE™ și Minifigure sunt mărci ale LEGO Group, care nu sponsorizează și nu susține această pagină. Datele copiilor sunt vizibile doar părinților lor și administratorului clubului.</footer>
-</div><div id="st"></div>
+<footer>Pagina oficială a clubului de robotică Minitehnicus Baia Sprie. LEGO®, SPIKE™ și Minifigure sunt mărci ale LEGO Group, care nu sponsorizează și nu susține această pagină. Datele copiilor sunt vizibile doar părinților lor și administratorului clubului. <span id="ver"></span></footer>
+</div><div id="st"></div><div id="errbar" onclick="this.style.display='none'" style="display:none;position:fixed;left:8px;right:8px;top:8px;z-index:60;background:#7a1022;color:#fff;padding:10px 12px;border-radius:12px;font-size:.8rem;cursor:pointer"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script>
@@ -223,20 +223,28 @@ var S={view:"progres",f:"all",open:{},user:null,isAdmin:false,authMode:"login",m
 try{S.rsvped=JSON.parse(localStorage.getItem("mtRsvp")||"{}")}catch(e){}
 
 /* ---------- acces la date ---------- */
+var TMO=window.__TMO__||15000;
+var TMO_MSG="Serverul nu răspunde. Verifică în config.js adresa și cheia Supabase și că proiectul nu este în pauză (supabase.com → proiectul tău → Restore).";
+function withTimeout(p,ms,msg){return new Promise(function(res,rej){var t=setTimeout(function(){rej(new Error(msg||"timeout"))},ms);Promise.resolve(p).then(function(v){clearTimeout(t);res(v)},function(e){clearTimeout(t);rej(e)})})}
 async function q(p){var r=await p;if(r.error)throw r.error;return r.data||[]}
 async function qAll(mk){var out=[],from=0;for(;;){var r=await mk().range(from,from+999);if(r.error)throw r.error;var d=r.data||[];out=out.concat(d);if(d.length<1000)break;from+=1000}return out}
 async function loadPublic(){
- try{
+ try{await withTimeout(loadPublicInner(),TMO,TMO_MSG);S.err=""}catch(e){S.err=ro(e)}
+}
+async function loadPublicInner(){
+ {
   S.sessions=await q(sb.from("sessions").select("*").order("date",{ascending:true}));
   S.events=await q(sb.from("events").select("*").order("date",{ascending:true}));
   var c=await sb.rpc("event_counts");S.counts={};(c.data||[]).forEach(function(r){S.counts[r.event_id]={rsvps:+r.rsvps,adults:+r.adults,kids:+r.kids}});
   (await q(sb.from("settings").select("*"))).forEach(function(r){S.settings[r.key]=r.value});
-  S.err="";
- }catch(e){S.err=ro(e)}
+ }
 }
 async function loadPrivate(){
  if(!S.user){S.isAdmin=false;S.children=[];S.attendance=[];S.profiles=[];S.rsvps=[];return}
- try{
+ try{await withTimeout(loadPrivateInner(),TMO,TMO_MSG)}catch(e){S.err=ro(e)}
+}
+async function loadPrivateInner(){
+ {
   var ia=await sb.rpc("is_admin");S.isAdmin=ia.data===true;
   S.children=await q(sb.from("children").select("*").order("name",{ascending:true}));
   S.attendance=await qAll(function(){return sb.from("attendance").select("*").order("session_id",{ascending:true})});
@@ -244,7 +252,7 @@ async function loadPrivate(){
    S.profiles=await q(sb.from("profiles").select("*").order("created_at",{ascending:false}));
    S.rsvps=await qAll(function(){return sb.from("event_rsvps").select("*").order("created_at",{ascending:false})});
   }
- }catch(e){S.err=ro(e)}
+ }
 }
 async function reload(){await loadPublic();await loadPrivate();render()}
 
@@ -269,7 +277,7 @@ function childStats(c){
 /* ---------- componente HTML ---------- */
 function stat(n,l){return'<div class="stat"><b>'+esc(n)+'</b>'+esc(l)+'</div>'}
 function fld(label,html){return'<label class="fl">'+esc(label)+'</label>'+html}
-function setupBox(){return'<div class="card"><h3>Aplicația nu este configurată încă</h3><p class="nt" style="margin:0">Completează fișierul <b>config.js</b> cu adresa și cheia publică din Supabase (vezi CITESTE-MA). Până atunci datele nu se pot încărca.</p></div>'}
+function setupBox(){if(cfgOk&&!window.supabase)return'<div class="card"><h3>Nu s-a putut încărca biblioteca</h3><p class="nt" style="margin:0">Biblioteca Supabase nu a putut fi descărcată. Verifică conexiunea la internet și reîncarcă pagina.</p></div>';return'<div class="card"><h3>Aplicația nu este configurată încă</h3><p class="nt" style="margin:0">Completează fișierul <b>config.js</b> cu adresa și cheia publică din Supabase (vezi CITESTE-MA). Până atunci datele nu se pot încărca.</p></div>'}
 function sessionCard(s,adm){
  return'<div class="card"><b>'+esc(sTitle(s))+'</b><div class="nt">'+esc(fmtD(s.date,true))+(s.time?" · ora "+esc(s.time):"")+(s.place?" · "+esc(s.place):"")+'</div>'+(s.note?'<div class="nt">'+esc(s.note)+'</div>':"")+(adm?'<div class="acts"><button class="ib" data-act="att" data-id="'+s.id+'">Prezență</button><button class="ib" data-act="edit" data-t="session" data-id="'+s.id+'">Editează</button><button class="ib" data-act="del" data-t="session" data-id="'+s.id+'">Șterge</button></div>':"")+'</div>'}
 
@@ -366,7 +374,7 @@ function admChildren(){
  });
  var linked={};S.children.forEach(function(c){if(c.parent_email)linked[lc(c.parent_email)]=1;if(c.parent_email2)linked[lc(c.parent_email2)]=1});
  var free=S.profiles.filter(function(p){return !linked[lc(p.email)]&&lc(p.email)!==lc(S.user&&S.user.email)});
- if(free.length){h+='<h2 class="sec">Conturi fără copil asociat ('+free.length+')</h2><div class="card">'+free.map(function(p){return'<div class="urow"><span>'+esc(p.email)+'</span></div>'}).join("")+'<p class="nt" style="margin:8px 0 0">Pentru a lega un cont de un copil, scrie emailul în câmpul „Email cont părinte" al copilului.</p></div>'}
+ if(free.length){h+='<h2 class="sec">Conturi fără copil asociat ('+free.length+')</h2><div class="card">'+free.map(function(p){return'<div class="urow"><span>'+esc(p.email)+'</span></div>'}).join("")+'<p class="nt" style="margin:8px 0 0">Pentru a lega un cont de un copil, scrie emailul în câmpul „Email cont părinte” al copilului.</p></div>'}
  return h;
 }
 function lessonOptions(sel){var o='<option value="">— lecție oficială —</option>';CAT.forEach(function(u){o+='<optgroup label="'+esc(u.n)+'">'+u.L.map(function(l){return'<option value="'+esc(l.key)+'"'+(sel===l.key?" selected":"")+'>'+esc(l.t)+'</option>'}).join("")+'</optgroup>'});return o}
@@ -390,7 +398,7 @@ function admAtt(){
  var cur=sess.find(function(s){return s.id===S.att.sid}),kids=S.children.filter(function(c){return c.active});
  var h='<div class="card"><h3>Prezență la sesiune</h3><select id="attsel">'+sess.map(function(s){return'<option value="'+s.id+'"'+(s.id===S.att.sid?" selected":"")+'>'+esc(fmtD(s.date))+' — '+esc(sTitle(s))+(s.done?" ✓":"")+'</option>'}).join("")+'</select>';
  if(!kids.length)return h+'<p class="nt">Nu ai copii activi. Adaugă mai întâi copii.</p></div>';
- h+='<p class="nt" style="margin:10px 0 0">Bifează cine a fost prezent. Punctaj automat: '+ppp()+' puncte per prezență. Câmpul „Bonus" adaugă (sau scade) puncte suplimentare.</p><div style="margin-top:8px">';
+ h+='<p class="nt" style="margin:10px 0 0">Bifează cine a fost prezent. Punctaj automat: '+ppp()+' puncte per prezență. Câmpul „Bonus” adaugă (sau scade) puncte suplimentare.</p><div style="margin-top:8px">';
  kids.forEach(function(c){var r=S.att.rows[c.id]||{present:false,bonus:0};h+='<div class="ar"><input type="checkbox" data-pres="'+c.id+'"'+(r.present?" checked":"")+' aria-label="Prezent"><span class="nm">'+esc(c.name)+'</span><input type="number" data-bonus="'+c.id+'" value="'+r.bonus+'" aria-label="Bonus" title="Bonus puncte"></div>'});
  h+='</div><div class="grid2" style="margin-top:12px"><button class="xbtn pri" data-act="saveatt">Salvează prezența</button><button class="xbtn" data-act="allpres">Toți prezenți</button></div>'+(cur&&cur.done?'<p class="nt" style="margin:10px 0 0">Sesiune finalizată ✓ (poți reveni oricând să corectezi).</p>':'')+'</div>';
  return h;
@@ -426,9 +434,9 @@ function render(){
  for(var i=0;i<tabs.length;i++){var t=tabs[i],v=t.dataset.v;t.classList.toggle("on",v===S.view);if(v==="admin")t.style.display=S.isAdmin?"":"none"}
  var h="";
  if(!sb)h=setupBox();
- else if(S.loading)h='<p class="nt" style="text-align:center">Se încarcă…</p>';
- else{if(S.err)h+='<div class="msg err">'+esc(S.err)+'</div>';h+=S.view==="evenimente"?viewEvents():S.view==="parinti"?viewParinti():S.view==="admin"?viewAdmin():viewProgres()}
+ else{if(S.loading)h+='<p class="nt" style="text-align:center;margin:0 0 10px">Se încarcă datele…</p>';if(S.err)h+='<div class="msg err">'+esc(S.err)+'</div>';h+=S.view==="evenimente"?viewEvents():S.view==="parinti"?viewParinti():S.view==="admin"?viewAdmin():viewProgres()}
  $("main").innerHTML=h;
+ var vr=$("ver");if(vr)vr.textContent="v2 · "+(sb?(S.loading?"se conectează…":S.err?"eroare de conexiune":"conectat"):"neconfigurat");
 }
 function go(v){S.view=v;S.msg="";try{location.hash="#"+v}catch(e){}render();try{window.scrollTo(0,0)}catch(e){}}
 
@@ -441,7 +449,7 @@ A.login=async function(v){var e=lc(v.email);if(!emailOk(e)||!v.password)return s
  var r=await sb.auth.signInWithPassword({email:e,password:v.password});if(r.error)return setMsg(ro(r.error),true);S.msg="";};
 A.signup=async function(v){var e=lc(v.email);if(!emailOk(e))return setMsg("Introdu un email valid.",true);if(!v.password||v.password.length<8)return setMsg("Parola trebuie să aibă cel puțin 8 caractere.",true);if(v.password!==v.password2)return setMsg("Parolele nu coincid.",true);
  var r=await sb.auth.signUp({email:e,password:v.password,options:{emailRedirectTo:redir()}});if(r.error)return setMsg(ro(r.error),true);
- if(r.data&&r.data.user&&r.data.user.identities&&r.data.user.identities.length===0)return setMsg("Există deja un cont cu acest email. Folosește „Am uitat parola" dacă nu-ți amintești parola.",true);
+ if(r.data&&r.data.user&&r.data.user.identities&&r.data.user.identities.length===0)return setMsg("Există deja un cont cu acest email. Folosește „Am uitat parola” dacă nu-ți amintești parola.",true);
  S.authMode="login";setMsg("Cont creat. Ți-am trimis un email de confirmare: apasă linkul din el (verifică și Spam), apoi intră în cont.",false);};
 A.reset=async function(v){var e=lc(v.email);if(!emailOk(e))return setMsg("Introdu un email valid.",true);
  var r=await sb.auth.resetPasswordForEmail(e,{redirectTo:redir()});if(r.error)return setMsg(ro(r.error),true);S.authMode="login";setMsg("Dacă există un cont cu acest email, ți-am trimis un link de resetare.",false);};
@@ -527,18 +535,23 @@ document.addEventListener("toggle",function(e){var t=e.target;if(t&&t.dataset&&t
 document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.target.tagName==="INPUT"&&e.target.type!=="checkbox"&&e.target.type!=="file"){var f=e.target.closest("[data-form=auth],[data-form=newpass]");if(f){var b=f.querySelector("[data-act]");if(b)b.click()}}});
 window.addEventListener("hashchange",function(){var h=(location.hash||"").slice(1);if(["progres","evenimente","parinti","admin"].indexOf(h)>-1&&h!==S.view){S.view=h;render()}});
 
+/* ---------- erori vizibile ---------- */
+function showErr(m){var b=$("errbar");if(!b)return;b.textContent="Eroare în pagină: "+m+" (apasă ca să închizi)";b.style.display="block"}
+window.addEventListener("error",function(e){showErr(e&&e.message?e.message:"necunoscută")});
+window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;showErr(String((r&&r.message)||r||"necunoscută"))});
+
 /* ---------- pornire ---------- */
 async function init(){
  var h=(location.hash||"").slice(1);if(["progres","evenimente","parinti","admin"].indexOf(h)>-1)S.view=h;
  if(!sb){S.loading=false;render();return}
  render();
- try{var g=await sb.auth.getSession();S.user=g&&g.data&&g.data.session?g.data.session.user:null}catch(e){}
+ try{var g=await withTimeout(sb.auth.getSession(),Math.min(6000,TMO),"auth");S.user=g&&g.data&&g.data.session?g.data.session.user:null}catch(e){}
  sb.auth.onAuthStateChange(function(ev,ses){
   S.user=ses?ses.user:null;
   if(ev==="PASSWORD_RECOVERY"){S.recovery=true;S.view="parinti"}
   setTimeout(async function(){await loadPrivate();render()},0);
  });
- await loadPublic();await loadPrivate();S.loading=false;render();
+ try{await loadPublic();await loadPrivate()}finally{S.loading=false;render()}
 }
 window.__MT={S:S,A:A,CAT:CAT,LES:LES,TOTAL:TOTAL,childStats:childStats,views:{progres:viewProgres,events:viewEvents,parinti:viewParinti,admin:viewAdmin,admChildren:admChildren,admSessions:admSessions,admAtt:admAtt,admEvents:admEvents,admSettings:admSettings,report:report},attRowsFor:attRowsFor,reload:reload,render:render,ready:init()};
 })();
