@@ -35,7 +35,7 @@ create table if not exists public.sessions (
   lesson_key text,
   title text check (char_length(title) <= 160),
   date date not null,
-  time text check (char_length(time) <= 20),
+  time text check (char_length("time") <= 20),
   place text check (char_length(place) <= 160),
   note text check (char_length(note) <= 500),
   done boolean not null default false,
@@ -60,7 +60,7 @@ create table if not exists public.events (
   title text not null check (char_length(title) between 2 and 160),
   description text check (char_length(description) <= 1000),
   date date not null,
-  time text check (char_length(time) <= 20),
+  time text check (char_length("time") <= 20),
   place text check (char_length(place) <= 160),
   capacity integer check (capacity is null or capacity > 0),
   open boolean not null default true,
@@ -249,5 +249,5 @@ on conflict (key) do nothing;
 -- 7) ADMINISTRATOR -----------------------------------------------
 -- Inlocuieste cu emailul tau real, intre ghilimele, INAINTE de a rula.
 insert into public.admins (email)
-values (lower('EMAIL_ADMIN_AICI'))
+values (lower('berenyiandreigabriel@gmail.com'))
 on conflict do nothing;
