@@ -553,6 +553,12 @@ async function init(){
  });
  try{await loadPublic();await loadPrivate()}finally{S.loading=false;render()}
 }
+/* ---------- click pe antet = reimprospatare ---------- */
+var hd=document.querySelector("header");
+if(hd){hd.setAttribute("role","button");hd.setAttribute("tabindex","0");hd.setAttribute("aria-label","Reîncarcă pagina");
+ hd.addEventListener("click",function(e){if(e.target.closest&&e.target.closest("#who"))return;location.reload()});
+ hd.addEventListener("keydown",function(e){if((e.key==="Enter"||e.key===" ")&&e.target===hd){e.preventDefault();location.reload()}});}
+
 window.__MT={S:S,A:A,CAT:CAT,LES:LES,TOTAL:TOTAL,childStats:childStats,views:{progres:viewProgres,events:viewEvents,parinti:viewParinti,admin:viewAdmin,admChildren:admChildren,admSessions:admSessions,admAtt:admAtt,admEvents:admEvents,admSettings:admSettings,report:report},attRowsFor:attRowsFor,reload:reload,render:render,ready:init()};
 })();
 
