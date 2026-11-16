@@ -152,7 +152,7 @@ label.lgb{display:inline-block;cursor:pointer}
 <nav class="tabs" id="tabs" aria-label="Meniu" style="display:flex">
 <button class="tab on" data-v="progres" aria-label="Progres lecții"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 15l3-4 3 2 5-6"/></svg><span>Progres</span></button>
 <button class="tab" data-v="evenimente" aria-label="Evenimente"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span>Evenimente</span></button>
-<button class="tab" data-v="parinti" aria-label="Părinți"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.4"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/></svg><span>Părinți</span></button>
+<button class="tab" data-v="tiktok" aria-label="TikTok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4v9.6a3.6 3.6 0 11-3-3.55"/><path d="M15 4a4.6 4.6 0 004.6 4.6"/></svg><span>TikTok</span></button><button class="tab" data-v="parinti" aria-label="Părinți"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.4"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/></svg><span>Părinți</span></button>
 <button class="tab" data-v="admin" aria-label="Admin" style="display:none"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 4.6-3 8.3-7 10-4-1.7-7-5.4-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg><span>Admin</span></button>
 </nav>
 <main id="main"><noscript><p class="noscript">Pentru a folosi pagina trebuie activat JavaScript.</p></noscript></main>
@@ -322,6 +322,21 @@ function viewEvents(){
  return h;
 }
 
+/* ---------- TikTok ---------- */
+var TTUSER="minitehnicus_bs",TTPROFILE="https://www.tiktok.com/@"+TTUSER;
+var TIKTOK=[
+ {vid:"7649091646495280406",url:"https://www.tiktok.com/@minitehnicus_bs/video/7649091646495280406"},
+ {vid:"7647766259454512406",url:"https://www.tiktok.com/@minitehnicus_bs/video/7647766259454512406"},
+ {vid:"7681799243866049814",url:"https://www.tiktok.com/@minitehnicus_bs/video/7681799243866049814"},
+ {vid:"7649793017909464342",url:"https://www.tiktok.com/@minitehnicus_bs/video/7649793017909464342"}
+];
+function viewTikTok(){
+ var h='<div class="card ttcard"><div class="ttp"><div class="ttav">M</div><div><b>Minitehnicus pe TikTok</b><div class="nt">@'+TTUSER+'</div></div><a class="xbtn pri" target="_blank" rel="noopener" href="'+TTPROFILE+'">Urmărește</a></div></div>';
+ h+='<div class="ttgrid">'+TIKTOK.map(function(v){return'<div class="ttitem"><iframe class="ttf" src="https://www.tiktok.com/player/v1/'+esc(v.vid)+'?music_info=0&description=1" allow="fullscreen;encrypted-media;picture-in-picture;autoplay" allowfullscreen loading="lazy" title="Videoclip TikTok"></iframe></div>'}).join("")+'</div>';
+ h+='<p class="nt" style="margin:12px 4px 0">Dacă un clip nu se încarcă, <a target="_blank" rel="noopener" href="'+TTPROFILE+'" style="color:var(--ac)">deschide contul direct pe TikTok</a>.</p>';
+ return h;
+}
+
 /* ---------- 2) meniul parintilor ---------- */
 function authCard(){
  var m=S.authMode,h='<div class="card" data-form="auth"><h3>'+(m==="signup"?"Creează cont de părinte":m==="reset"?"Resetare parolă":"Autentificare părinți")+'</h3>';
@@ -433,8 +448,8 @@ function render(){
  var tabs=document.querySelectorAll?document.querySelectorAll(".tab"):[];
  for(var i=0;i<tabs.length;i++){var t=tabs[i],v=t.dataset.v;t.classList.toggle("on",v===S.view);if(v==="admin")t.style.display=S.isAdmin?"":"none"}
  var h="";
- if(!sb)h=setupBox();
- else{if(S.loading)h+='<p class="nt" style="text-align:center;margin:0 0 10px">Se încarcă datele…</p>';if(S.err)h+='<div class="msg err">'+esc(S.err)+'</div>';h+=S.view==="evenimente"?viewEvents():S.view==="parinti"?viewParinti():S.view==="admin"?viewAdmin():viewProgres()}
+ if(!sb&&S.view!=="tiktok")h=setupBox();
+ else{if(S.loading)h+='<p class="nt" style="text-align:center;margin:0 0 10px">Se încarcă datele…</p>';if(S.err)h+='<div class="msg err">'+esc(S.err)+'</div>';h+=S.view==="evenimente"?viewEvents():S.view==="tiktok"?viewTikTok():S.view==="parinti"?viewParinti():S.view==="admin"?viewAdmin():viewProgres()}
  $("main").innerHTML=h;
  var vr=$("ver");if(vr)vr.textContent="v2 · "+(sb?(S.loading?"se conectează…":S.err?"eroare de conexiune":"conectat"):"neconfigurat");
 }
@@ -533,7 +548,7 @@ document.addEventListener("change",function(e){
 });
 document.addEventListener("toggle",function(e){var t=e.target;if(t&&t.dataset&&t.dataset.u){if(t.open)S.open[t.dataset.u]=1;else delete S.open[t.dataset.u]}},true);
 document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.target.tagName==="INPUT"&&e.target.type!=="checkbox"&&e.target.type!=="file"){var f=e.target.closest("[data-form=auth],[data-form=newpass]");if(f){var b=f.querySelector("[data-act]");if(b)b.click()}}});
-window.addEventListener("hashchange",function(){var h=(location.hash||"").slice(1);if(["progres","evenimente","parinti","admin"].indexOf(h)>-1&&h!==S.view){S.view=h;render()}});
+window.addEventListener("hashchange",function(){var h=(location.hash||"").slice(1);if(["progres","evenimente","tiktok","parinti","admin"].indexOf(h)>-1&&h!==S.view){S.view=h;render()}});
 
 /* ---------- erori vizibile ---------- */
 function showErr(m){var b=$("errbar");if(!b)return;b.textContent="Eroare în pagină: "+m+" (apasă ca să închizi)";b.style.display="block"}
@@ -542,7 +557,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;showE
 
 /* ---------- pornire ---------- */
 async function init(){
- var h=(location.hash||"").slice(1);if(["progres","evenimente","parinti","admin"].indexOf(h)>-1)S.view=h;
+ var h=(location.hash||"").slice(1);if(["progres","evenimente","tiktok","parinti","admin"].indexOf(h)>-1)S.view=h;
  if(!sb){S.loading=false;render();return}
  render();
  try{var g=await withTimeout(sb.auth.getSession(),Math.min(6000,TMO),"auth");S.user=g&&g.data&&g.data.session?g.data.session.user:null}catch(e){}
@@ -559,7 +574,7 @@ if(hd){hd.setAttribute("role","button");hd.setAttribute("tabindex","0");hd.setAt
  hd.addEventListener("click",function(e){if(e.target.closest&&e.target.closest("#who"))return;location.reload()});
  hd.addEventListener("keydown",function(e){if((e.key==="Enter"||e.key===" ")&&e.target===hd){e.preventDefault();location.reload()}});}
 
-window.__MT={S:S,A:A,CAT:CAT,LES:LES,TOTAL:TOTAL,childStats:childStats,views:{progres:viewProgres,events:viewEvents,parinti:viewParinti,admin:viewAdmin,admChildren:admChildren,admSessions:admSessions,admAtt:admAtt,admEvents:admEvents,admSettings:admSettings,report:report},attRowsFor:attRowsFor,reload:reload,render:render,ready:init()};
+window.__MT={S:S,A:A,CAT:CAT,LES:LES,TOTAL:TOTAL,childStats:childStats,views:{tiktok:viewTikTok,progres:viewProgres,events:viewEvents,parinti:viewParinti,admin:viewAdmin,admChildren:admChildren,admSessions:admSessions,admAtt:admAtt,admEvents:admEvents,admSettings:admSettings,report:report},attRowsFor:attRowsFor,reload:reload,render:render,ready:init()};
 })();
 
 </script></body></html>
